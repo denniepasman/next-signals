@@ -1,0 +1,32 @@
+{
+  "note": "Synthetic. Shapes follow the documented Vercel log drain schema (checked 23 Oct 2026); values are invented and the secret is a throwaway test value. Replace with recorded samples after the follow-up in docs/for-dennie.md. Signature = hex HMAC-SHA1 of the raw body bytes.",
+  "secret": "test-drain-secret-not-real",
+  "vectors": [
+    {
+      "name": "json batch",
+      "bodyFile": "log-drain-batch.json",
+      "header": "28d2294b501f379bd6e803231472fa78765e8033",
+      "isValid": true
+    },
+    {
+      "name": "ndjson batch",
+      "bodyFile": "log-drain-batch.ndjson",
+      "header": "f79f46b22a9b004b07c2dae14372daee564688c8",
+      "isValid": true
+    },
+    {
+      "name": "tampered body",
+      "bodyFile": "log-drain-batch.ndjson",
+      "header": "2e7723ac21a49fdd1e667cccbd602cbb974b30fb",
+      "isValid": false
+    },
+    {
+      "name": "missing header",
+      "bodyFile": "log-drain-batch.ndjson",
+      "header": null,
+      "isValid": false
+    }
+  ],
+  "expectedKeptIdSuffixes": ["0001", "0002", "0003", "0004"],
+  "expectedDroppedIdSuffixes": ["0005"]
+}
