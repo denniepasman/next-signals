@@ -1,0 +1,231 @@
+{
+  "contract_version": "1",
+  "note": "Single source for the signer and schema tests of DennieOS (apps/web) and the client packages (#1867, #1868, #1870). Test secrets only. string_to_sign = timestamp + LF + method + LF + path_and_query; signature = sha256= + hex HMAC-SHA256.",
+  "secrets": {
+    "current": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "previous": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+  },
+  "max_clock_skew_seconds": 300,
+  "signed_requests": [
+    {
+      "name": "first_pull",
+      "timestamp": 1792742400,
+      "method": "GET",
+      "path_and_query": "/dennieos/intake/v1/events?limit=500",
+      "secret": "current",
+      "expected_signature": "sha256=1ecf03272c071d201156e851fdd3d3504a0b1c19df4de83d0ce0bd053f69482b"
+    },
+    {
+      "name": "with_cursor",
+      "timestamp": 1792742400,
+      "method": "GET",
+      "path_and_query": "/dennieos/intake/v1/events?cursor=01JB2Y8K7Q3W&limit=500",
+      "secret": "current",
+      "expected_signature": "sha256=7ae8992b1899f44d0fd6b316d162244f1565b85ec09e54aca55be8c686c8ddcd"
+    },
+    {
+      "name": "with_log_filter",
+      "timestamp": 1792742400,
+      "method": "GET",
+      "path_and_query": "/dennieos/intake/v1/events?cursor=01JB2Y8K7Q3W&limit=500&log_filter=eyJydWxlcyI6W3sicGF0dGVybiI6ImxhcmF2ZWwtKi5sb2ciLCJtb2RlIjoiaW5jbHVkZSIsIm1pbl9sZXZlbCI6Indhcm5pbmcifSx7InBhdHRlcm4iOiJ3b3JrZXItKi5sb2ciLCJtb2RlIjoiaW5jbHVkZSIsIm1pbl9sZXZlbCI6ImVycm9yIn0seyJwYXR0ZXJuIjoiZGVwbG95LSoubG9nIiwibW9kZSI6ImV4Y2x1ZGUifV19",
+      "secret": "current",
+      "expected_signature": "sha256=ba5899778ddcfe6b8e72390aad989318c25b369b48a9b9899ba663d82d5b8c34"
+    },
+    {
+      "name": "path_prefix_percent_encoded",
+      "timestamp": 1792742400,
+      "method": "GET",
+      "path_and_query": "/api/v2/dennieos/intake/v1/events?cursor=a%2Fb%3D&limit=100",
+      "secret": "current",
+      "expected_signature": "sha256=45199a7ea61f03f65665eae1b6cc11b693b26334915c6f6fe172c138b36269ef"
+    },
+    {
+      "name": "signed_with_previous_secret",
+      "timestamp": 1792742400,
+      "method": "GET",
+      "path_and_query": "/dennieos/intake/v1/events?limit=500",
+      "secret": "previous",
+      "expected_signature": "sha256=9276c32b853ee868f46288e9348cffdd8a0698d4609dcdc5738df070d92646a9"
+    }
+  ],
+  "log_filter_encoding": {
+    "decoded": {
+      "rules": [
+        {
+          "pattern": "laravel-*.log",
+          "mode": "include",
+          "min_level": "warning"
+        },
+        {
+          "pattern": "worker-*.log",
+          "mode": "include",
+          "min_level": "error"
+        },
+        {
+          "pattern": "deploy-*.log",
+          "mode": "exclude"
+        }
+      ]
+    },
+    "encoded": "eyJydWxlcyI6W3sicGF0dGVybiI6ImxhcmF2ZWwtKi5sb2ciLCJtb2RlIjoiaW5jbHVkZSIsIm1pbl9sZXZlbCI6Indhcm5pbmcifSx7InBhdHRlcm4iOiJ3b3JrZXItKi5sb2ciLCJtb2RlIjoiaW5jbHVkZSIsIm1pbl9sZXZlbCI6ImVycm9yIn0seyJwYXR0ZXJuIjoiZGVwbG95LSoubG9nIiwibW9kZSI6ImV4Y2x1ZGUifV19"
+  },
+  "verification_cases": [
+    {
+      "name": "valid",
+      "now": 1792742410,
+      "request": "first_pull",
+      "timestamp_header": "1792742400",
+      "expected": "valid"
+    },
+    {
+      "name": "skew_at_limit",
+      "now": 1792742700,
+      "request": "first_pull",
+      "timestamp_header": "1792742400",
+      "expected": "valid"
+    },
+    {
+      "name": "too_old",
+      "now": 1792742701,
+      "request": "first_pull",
+      "timestamp_header": "1792742400",
+      "expected": "expired"
+    },
+    {
+      "name": "too_far_in_future",
+      "now": 1792742099,
+      "request": "first_pull",
+      "timestamp_header": "1792742400",
+      "expected": "expired"
+    },
+    {
+      "name": "previous_secret_accepted_during_rotation",
+      "now": 1792742400,
+      "request": "signed_with_previous_secret",
+      "timestamp_header": "1792742400",
+      "expected": "valid"
+    },
+    {
+      "name": "tampered_cursor",
+      "now": 1792742400,
+      "request": "with_cursor",
+      "path_and_query": "/dennieos/intake/v1/events?cursor=01JB2Y8K7Q3X&limit=500",
+      "timestamp_header": "1792742400",
+      "expected": "invalid"
+    },
+    {
+      "name": "log_filter_removed",
+      "now": 1792742400,
+      "request": "with_log_filter",
+      "path_and_query": "/dennieos/intake/v1/events?cursor=01JB2Y8K7Q3W&limit=500",
+      "timestamp_header": "1792742400",
+      "expected": "invalid"
+    },
+    {
+      "name": "other_method",
+      "now": 1792742400,
+      "request": "first_pull",
+      "method": "POST",
+      "timestamp_header": "1792742400",
+      "expected": "invalid"
+    },
+    {
+      "name": "timestamp_changed",
+      "now": 1792742405,
+      "request": "first_pull",
+      "timestamp_header": "1792742405",
+      "expected": "invalid"
+    }
+  ],
+  "sample_responses": {
+    "minimal": {
+      "events": [
+        {
+          "id": "01JB2Y8K7Q3W",
+          "occurred_at": "2026-10-23T08:14:03.512Z",
+          "level": "error",
+          "class": "Illuminate\\Database\\QueryException",
+          "message": "SQLSTATE[23000]: Integrity constraint violation",
+          "stack": "#0 app/Http/Controllers/PaymentController.php(88): store()",
+          "fingerprint_hint": "3f9a",
+          "context": {
+            "route": "payments.store",
+            "method": "POST",
+            "status": 500,
+            "release": "2026.10.22-1",
+            "user_hash": "b41c",
+            "browser": null,
+            "url_path": "/betalen/:id"
+          }
+        }
+      ],
+      "next_cursor": "01JB2Y8K7Q3W",
+      "heartbeat": {
+        "scheduler_last_run_at": "2026-10-23T08:15:00Z",
+        "writer_last_ok_at": "2026-10-23T08:14:03Z",
+        "buffered": 0,
+        "dropped": 0,
+        "package_version": "1.0.0",
+        "contract_version": "1"
+      }
+    },
+    "empty": {
+      "events": [],
+      "next_cursor": "01JB2Y8K7Q3W",
+      "heartbeat": {
+        "scheduler_last_run_at": "2026-10-23T08:15:00Z",
+        "writer_last_ok_at": "2026-10-23T08:14:03Z",
+        "buffered": 0,
+        "dropped": 0,
+        "package_version": "1.0.0",
+        "contract_version": "1"
+      }
+    },
+    "with_log_files": {
+      "events": [
+        {
+          "id": "01JB2Y9A",
+          "occurred_at": "2026-10-23T08:14:03.512Z",
+          "level": "error",
+          "class": "Illuminate\\Database\\QueryException",
+          "message": "SQLSTATE[23000]: Integrity constraint violation",
+          "stack": "#0 app/Http/Controllers/PaymentController.php(88): store()",
+          "fingerprint_hint": "3f9a",
+          "context": {
+            "route": "payments.store",
+            "method": "POST",
+            "status": 500,
+            "release": "2026.10.22-1",
+            "user_hash": "b41c",
+            "browser": null,
+            "url_path": "/betalen/:id",
+            "log_file": "laravel-2026-10-23.log",
+            "command": "subscriptions:renew"
+          }
+        }
+      ],
+      "next_cursor": "01JB2Y9A",
+      "heartbeat": {
+        "scheduler_last_run_at": "2026-10-23T08:15:00Z",
+        "writer_last_ok_at": "2026-10-23T08:14:03Z",
+        "buffered": 0,
+        "dropped": 0,
+        "package_version": "1.0.0",
+        "contract_version": "1",
+        "log_channel": "daily",
+        "log_files": [
+          {
+            "path": "laravel-2026-10-23.log",
+            "size_bytes": 20480,
+            "modified_at": "2026-10-23T08:14:03Z"
+          },
+          {
+            "path": "deploy-2026-10-22.log",
+            "size_bytes": 512,
+            "modified_at": "2026-10-22T21:00:00Z"
+          }
+        ]
+      }
+    }
+  }
+}
