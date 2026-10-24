@@ -28,13 +28,13 @@ only as `HMAC-SHA256(salt, user_id)`. The scrub rules are a port of DennieOS's o
 
 ## Install
 
-1. **Package.** While the package is private, install it from GitHub (it builds on install):
+1. **Package.** The package is public on GitHub and not (yet) on npm. Install it from GitHub (it builds on install):
 
    ```bash
    npm install github:denniepasman/next-signals#v1.0.0 @supabase/supabase-js
    ```
 
-   (Once published to a private npm scope: `npm install @dennieos/next-signals`.)
+   (Once published to npm: `npm install @dennieos/next-signals`.)
 
 2. **Database.** Apply `sql/001_dennieos_error_events.sql` to the client's Supabase project (SQL
    editor or a Supabase migration; the file ships in the package at
