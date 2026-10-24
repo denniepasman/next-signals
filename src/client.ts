@@ -64,7 +64,14 @@ export function startBrowserReporter(
           keepalive: true,
           credentials: "same-origin",
         }),
-      ).catch(() => undefined);
+      )
+        .then((response) => {
+          // A 404 means the app has no DENNIEOS_INTAKE_SECRET (inert): stop for this page load.
+          if (typeof response === "object" && response !== null && (response as { status?: unknown }).status === 404) {
+            isActive = false;
+          }
+        })
+        .catch(() => undefined);
     } catch {
       // Reporting must never break the page.
     }

@@ -5,6 +5,14 @@ Error capture for Next.js apps (App Router, Next 14 to 16) that report to Dennie
 DennieOS **pulls** them with a signed `GET`. DennieOS never gets database credentials, and the
 app exposes no endpoint anyone can post server errors to.
 
+## Inert unless configured
+
+The package is **active only when `DENNIEOS_INTAKE_SECRET` is set** (non-empty). Without it:
+`onRequestError` does nothing, and the intake, browser error, drain and heartbeat routes answer
+`404` with an empty body. No environment variable is validated, no Supabase client is created and
+nothing is written. The browser reporter stops after the first `404`. So the same code can ship to
+every environment; set the secret only where it should report.
+
 | Piece | What it does |
 | --- | --- |
 | `onRequestError` (`@dennieos/next-signals/instrumentation`) | Server render, route handler and server action errors. Needs Next 15 or newer (Next 14 has no `onRequestError`; the other pieces work). |
@@ -32,13 +40,13 @@ only as `HMAC-SHA256(salt, user_id)`. The scrub rules are a port of DennieOS's o
    editor or a Supabase migration; the file ships in the package at
    `node_modules/@dennieos/next-signals/sql/`). Then add `dennieos` under *Project Settings, API,
    Exposed schemas*. The table has RLS on and **no policies**: only the service role (server side)
-   reads or writes it.
+   reads or writes it. The SQL file is applied by the owner and is harmless while the package is inactive.
 
-3. **Environment variables** (Vercel project settings, Production):
+3. **Environment variables** (Vercel project settings, **Production only**; for a staging or preview environment do not set `DENNIEOS_INTAKE_SECRET`, the package then stays inert and needs no other switch):
 
    | Variable | Meaning |
    | --- | --- |
-   | `DENNIEOS_INTAKE_SECRET` | Shown once in the DennieOS connect wizard (32 random bytes, hex). |
+   | `DENNIEOS_INTAKE_SECRET` | Shown once in the DennieOS connect wizard (32 random bytes, hex). **Without it the package is inactive.** |
    | `DENNIEOS_INTAKE_SECRET_PREVIOUS` | Only during a rotation (24 hours). |
    | `DENNIEOS_USER_HASH_SALT` | Per-source salt from DennieOS; only needed with `getUserId`. |
    | `NEXT_PUBLIC_SUPABASE_URL` | Already present in most apps (or `SUPABASE_URL`). |

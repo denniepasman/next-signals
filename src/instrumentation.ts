@@ -1,3 +1,4 @@
+import { resolveIsActive } from "./server/activation";
 import { getRuntime, type Runtime } from "./server/runtime";
 import { ingestServerError } from "./server/services/ingest-server-error";
 
@@ -15,17 +16,23 @@ export interface RequestErrorContext {
 
 export interface OnRequestErrorOptions {
   readonly runtime?: () => Runtime;
+  /** Default: active when DENNIEOS_INTAKE_SECRET is set (always active with an injected runtime). */
+  readonly isActive?: () => boolean;
   /** Your own user id for this request (session lookup); stored only as an HMAC. */
   readonly getUserId?: (request: RequestErrorRequest) => string | null | Promise<string | null>;
 }
 
 export function createOnRequestError(options: OnRequestErrorOptions = {}) {
   const resolveRuntime = options.runtime ?? getRuntime;
+  const isActive = resolveIsActive(options);
   return async function onRequestError(
     error: unknown,
     request: RequestErrorRequest,
     context: RequestErrorContext,
   ): Promise<void> {
+    if (!isActive()) {
+      return;
+    }
     // The reporter must never break the request it reports on.
     try {
       const runtime = resolveRuntime();

@@ -3,11 +3,14 @@ import {
   browserReportSchema,
   ingestBrowserError,
 } from "../server/services/ingest-browser-error";
+import { inactiveResponse, resolveIsActive } from "../server/activation";
 import { getRuntime, type Runtime } from "../server/runtime";
 import { clientKey, errorResponse } from "./http";
 
 export interface BrowserErrorRouteOptions {
   readonly runtime?: () => Runtime;
+  /** Default: active when DENNIEOS_INTAKE_SECRET is set (always active with an injected runtime). */
+  readonly isActive?: () => boolean;
 }
 
 function isSameOrigin(request: Request, runtime: Runtime): boolean {
@@ -31,8 +34,12 @@ export function createBrowserErrorHandlers(options: BrowserErrorRouteOptions = {
   POST: (request: Request) => Promise<Response>;
 } {
   const resolveRuntime = options.runtime ?? getRuntime;
+  const isActive = resolveIsActive(options);
   return {
     async POST(request) {
+      if (!isActive()) {
+        return inactiveResponse();
+      }
       const runtime = resolveRuntime();
       if (!isSameOrigin(request, runtime)) {
         return errorResponse("browser_errors.origin_refused", 403);
