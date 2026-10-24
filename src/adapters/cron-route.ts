@@ -1,10 +1,13 @@
 import { safeEqual } from "../domain/signature";
+import { inactiveResponse, resolveIsActive } from "../server/activation";
 import { getRuntime, type Runtime } from "../server/runtime";
 import { runHeartbeat } from "../server/services/run-heartbeat";
 import { errorResponse, jsonResponse } from "./http";
 
 export interface CronRouteOptions {
   readonly runtime?: () => Runtime;
+  /** Default: active when DENNIEOS_INTAKE_SECRET is set (always active with an injected runtime). */
+  readonly isActive?: () => boolean;
 }
 
 /** `GET /dennieos/cron/heartbeat`: called by a Vercel cron with `Authorization: Bearer $CRON_SECRET`. */
@@ -12,8 +15,12 @@ export function createCronHandlers(options: CronRouteOptions = {}): {
   GET: (request: Request) => Promise<Response>;
 } {
   const resolveRuntime = options.runtime ?? getRuntime;
+  const isActive = resolveIsActive(options);
   return {
     async GET(request) {
+      if (!isActive()) {
+        return inactiveResponse();
+      }
       const runtime = resolveRuntime();
       const { cronSecret } = runtime.config;
       const authorization = request.headers.get("authorization") ?? "";

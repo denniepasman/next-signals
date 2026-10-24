@@ -1,4 +1,5 @@
 import { safeEqual, verifyDrainSignature } from "../domain/signature";
+import { inactiveResponse, resolveIsActive } from "../server/activation";
 import { getRuntime, type Runtime } from "../server/runtime";
 import { ingestDrainBody } from "../server/services/ingest-drain";
 import { errorResponse, jsonResponse } from "./http";
@@ -9,6 +10,8 @@ export const DRAIN_HEADER = "x-dennieos-drain";
 
 export interface DrainRouteOptions {
   readonly runtime?: () => Runtime;
+  /** Default: active when DENNIEOS_INTAKE_SECRET is set (always active with an injected runtime). */
+  readonly isActive?: () => boolean;
 }
 
 /** `POST /dennieos/drain/vercel` (ADR 0039): verify, parse, keep errors, store, answer 200. */
@@ -16,8 +19,12 @@ export function createDrainHandlers(options: DrainRouteOptions = {}): {
   POST: (request: Request) => Promise<Response>;
 } {
   const resolveRuntime = options.runtime ?? getRuntime;
+  const isActive = resolveIsActive(options);
   return {
     async POST(request) {
+      if (!isActive()) {
+        return inactiveResponse();
+      }
       const runtime = resolveRuntime();
       const { drainSignatureSecret, drainHeaderSecret } = runtime.config;
       if (drainSignatureSecret === null) {

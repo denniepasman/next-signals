@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { verifyIntakeRequest } from "../domain/signature";
+import { inactiveResponse, resolveIsActive } from "../server/activation";
 import { getRuntime, type Runtime } from "../server/runtime";
 import { pullEvents } from "../server/services/pull-events";
 import { errorResponse, jsonResponse } from "./http";
@@ -13,6 +14,8 @@ const querySchema = z.object({
 
 export interface IntakeRouteOptions {
   readonly runtime?: () => Runtime;
+  /** Default: active when DENNIEOS_INTAKE_SECRET is set (always active with an injected runtime). */
+  readonly isActive?: () => boolean;
   /**
    * The path DennieOS signs, when it differs from the URL this app sees (a rewrite or proxy that
    * strips a prefix). Receives the path and query as this app sees them.
@@ -25,8 +28,12 @@ export function createIntakeHandlers(options: IntakeRouteOptions = {}): {
   GET: (request: Request) => Promise<Response>;
 } {
   const resolveRuntime = options.runtime ?? getRuntime;
+  const isActive = resolveIsActive(options);
   return {
     async GET(request) {
+      if (!isActive()) {
+        return inactiveResponse();
+      }
       const runtime = resolveRuntime();
       const url = new URL(request.url);
       const seen = `${url.pathname}${url.search}`;
